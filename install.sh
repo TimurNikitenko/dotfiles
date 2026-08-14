@@ -2,7 +2,7 @@
 set -e
 
 # ===== Конфигурация =====
-REPO_URL="https://github.com/ВАШ_АККАУНТ/dotfiles.git"
+REPO_URL="https://github.com/TimurNikitenko/dotfiles.git"
 DOTFILES_DIR="$HOME/dotfiles"
 STOW_PACKAGES=("git" "nvim" "wezterm" "zsh")
 
