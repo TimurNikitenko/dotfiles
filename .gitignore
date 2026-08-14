@@ -1,0 +1,8 @@
+# Swap & Backup
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Neovim / Lazy / Packer logs & shada
+.netrwhist
