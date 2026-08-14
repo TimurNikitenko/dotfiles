@@ -1,10 +1,17 @@
 #!/usr/bin/env bash
-set -e  # прерывать при любой ошибке
+set -e
 
 # ===== Конфигурация =====
-REPO_URL="https://github.com/TimurNikitenko/dotfiles.git"   # <-- замените на свой URL
+REPO_URL="https://github.com/ВАШ_АККАУНТ/dotfiles.git"
 DOTFILES_DIR="$HOME/dotfiles"
-STOW_PACKAGES=("git" "nvim" "wezterm" "zsh")   # папки-пакеты в корне репозитория
+STOW_PACKAGES=("git" "nvim" "wezterm" "zsh")
+
+# Флаги (по умолчанию всё включено)
+INSTALL_PROGRAMS=true
+CHANGE_SHELL=true
+STOW_DOTFILES=true
+FORCE=false
+ADOPT=false
 # ========================
 
 # Цвета
@@ -13,115 +20,206 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
 
-# Флаги (можно передать как аргументы)
-FORCE=false
-ADOPT=false
-NO_INSTALL=false
-
 usage() {
-    echo "Использование: $0 [опции]"
-    echo "  --repo URL       URL репозитория (по умолчанию: $REPO_URL)"
-    echo "  --force          Принудительно удалять конфликтующие файлы (без подтверждения)"
-    echo "  --adopt          Принять существующие файлы в репозиторий (заменяет содержимое репозитория)"
-    echo "  --no-install     Не устанавливать зависимости (git, stow)"
-    echo "  --help           Показать эту справку"
+    cat <<EOF
+Использование: $0 [опции]
+
+Опции:
+  --no-install       Не устанавливать пакеты (только stow)
+  --no-shell         Не менять оболочку на Zsh
+  --no-stow          Не применять stow (только установка)
+  --force            Удалять конфликтующие файлы при stow
+  --adopt            Принять существующие файлы в репозиторий
+  --repo URL         URL репозитория (по умолчанию: $REPO_URL)
+  --help             Показать эту справку
+
+По умолчанию скрипт устанавливает пакеты, меняет оболочку и применяет stow.
+EOF
     exit 0
 }
 
 # Разбор аргументов
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --repo)
-            REPO_URL="$2"
-            shift 2
-            ;;
-        --force)
-            FORCE=true
-            shift
-            ;;
-        --adopt)
-            ADOPT=true
-            shift
-            ;;
-        --no-install)
-            NO_INSTALL=true
-            shift
-            ;;
-        --help)
-            usage
-            ;;
-        *)
-            echo -e "${RED}Неизвестный аргумент: $1${NC}"
-            usage
-            ;;
+        --no-install) INSTALL_PROGRAMS=false; shift ;;
+        --no-shell) CHANGE_SHELL=false; shift ;;
+        --no-stow) STOW_DOTFILES=false; shift ;;
+        --force) FORCE=true; shift ;;
+        --adopt) ADOPT=true; shift ;;
+        --repo) REPO_URL="$2"; shift 2 ;;
+        --help) usage ;;
+        *) echo -e "${RED}Неизвестный аргумент: $1${NC}"; usage ;;
     esac
 done
 
-echo -e "${GREEN}=== Dotfiles Installer ===${NC}"
+echo -e "${GREEN}=== Dotfiles Installer (Universal) ===${NC}"
 
-# 1. Установка зависимостей (если не отключено)
-if [ "$NO_INSTALL" = false ]; then
-    echo -e "${YELLOW}Проверка и установка необходимых пакетов...${NC}"
-    if command -v apt-get &>/dev/null; then
-        sudo apt-get update
-        sudo apt-get install -y git stow
+# ---- Определение ОС и пакетного менеджера ----
+detect_os() {
+    if [[ -f /etc/os-release ]]; then
+        . /etc/os-release
+        OS=$ID
+        VERSION=$VERSION_ID
     else
-        echo -e "${RED}apt-get не найден. Установите вручную git и stow.${NC}"
+        OS=$(uname -s)
+    fi
+    echo -e "Обнаружена ОС: ${GREEN}$OS${NC}"
+}
+
+detect_package_manager() {
+    if command -v apt-get &>/dev/null; then
+        PKG_MANAGER="apt"
+        INSTALL_CMD="sudo apt-get install -y"
+        UPDATE_CMD="sudo apt-get update"
+        PKG_LIST="git stow zsh neovim"
+        # WezTerm может быть в репозитории, но часто нет – добавляем отдельную установку
+        WEZTERM_INSTALL="wezterm" # если доступен
+    elif command -v pacman &>/dev/null; then
+        PKG_MANAGER="pacman"
+        INSTALL_CMD="sudo pacman -S --needed"
+        UPDATE_CMD="sudo pacman -Sy"
+        PKG_LIST="git stow zsh neovim"
+        WEZTERM_INSTALL="wezterm" # в официальных репозиториях Arch есть
+    elif command -v dnf &>/dev/null; then
+        PKG_MANAGER="dnf"
+        INSTALL_CMD="sudo dnf install -y"
+        UPDATE_CMD="sudo dnf check-update"
+        PKG_LIST="git stow zsh neovim"
+        WEZTERM_INSTALL="wezterm" # обычно есть в EPEL или RPMfusion
+    elif command -v zypper &>/dev/null; then
+        PKG_MANAGER="zypper"
+        INSTALL_CMD="sudo zypper install -y"
+        UPDATE_CMD="sudo zypper refresh"
+        PKG_LIST="git stow zsh neovim"
+        WEZTERM_INSTALL="wezterm"
+    elif command -v brew &>/dev/null; then
+        PKG_MANAGER="brew"
+        INSTALL_CMD="brew install"
+        UPDATE_CMD="brew update"
+        PKG_LIST="git stow zsh neovim"
+        WEZTERM_INSTALL="wezterm"
+    else
+        echo -e "${RED}Не найден поддерживаемый пакетный менеджер.${NC}"
+        echo "Установите вручную: git, stow, zsh, neovim, wezterm"
         exit 1
     fi
-else
-    echo -e "${YELLOW}Пропускаем установку зависимостей (--no-install)${NC}"
-fi
+    echo -e "Пакетный менеджер: ${GREEN}$PKG_MANAGER${NC}"
+}
 
-# 2. Клонирование или обновление репозитория
-if [ -d "$DOTFILES_DIR/.git" ]; then
-    echo -e "${YELLOW}Репозиторий уже существует. Обновляем...${NC}"
-    cd "$DOTFILES_DIR"
-    git pull
-else
-    if [ -e "$DOTFILES_DIR" ]; then
-        echo -e "${RED}Каталог $DOTFILES_DIR существует, но не является git-репозиторием.${NC}"
-        echo -e "Пожалуйста, удалите или переименуйте его и запустите скрипт заново."
-        exit 1
-    fi
-    echo -e "${GREEN}Клонируем репозиторий...${NC}"
-    git clone "$REPO_URL" "$DOTFILES_DIR"
-    cd "$DOTFILES_DIR"
-fi
-
-# 3. Применение stow для каждого пакета
-echo -e "${YELLOW}Применяем символические ссылки через stow...${NC}"
-
-for package in "${STOW_PACKAGES[@]}"; do
-    # Проверяем, существует ли папка пакета в репозитории
-    if [ ! -d "$DOTFILES_DIR/$package" ]; then
-        echo -e "${RED}Пакет '$package' не найден в репозитории. Пропускаем.${NC}"
-        continue
+# ---- Установка пакетов ----
+install_packages() {
+    if [ "$INSTALL_PROGRAMS" = false ]; then
+        echo -e "${YELLOW}Пропускаем установку пакетов (--no-install)${NC}"
+        return
     fi
 
-    echo -e "  Обработка пакета: ${GREEN}$package${NC}"
+    echo -e "${YELLOW}Установка базовых пакетов...${NC}"
+    $UPDATE_CMD || true
+    $INSTALL_CMD $PKG_LIST
 
-    # Формируем опции stow
-    STOW_OPTS="-v --no-folding --restow"
+    # Установка WezTerm (если не установлен)
+    if ! command -v wezterm &>/dev/null; then
+        echo -e "${YELLOW}Установка WezTerm...${NC}"
+        case $PKG_MANAGER in
+            apt)
+                # Для Ubuntu/Debian – скачиваем .deb с GitHub
+                WEZTERM_URL=$(curl -s https://api.github.com/repos/wez/wezterm/releases/latest | grep "browser_download_url.*deb" | cut -d '"' -f 4)
+                if [ -n "$WEZTERM_URL" ]; then
+                    wget -O /tmp/wezterm.deb "$WEZTERM_URL"
+                    sudo dpkg -i /tmp/wezterm.deb || sudo apt-get install -f -y
+                else
+                    echo -e "${RED}Не удалось найти .deb для WezTerm. Установите вручную.${NC}"
+                fi
+                ;;
+            pacman)
+                sudo pacman -S --needed wezterm
+                ;;
+            dnf)
+                sudo dnf install -y wezterm || echo -e "${RED}WezTerm не найден в репозиториях. Установите вручную.${NC}"
+                ;;
+            zypper)
+                sudo zypper install -y wezterm || echo -e "${RED}WezTerm не найден. Установите вручную.${NC}"
+                ;;
+            brew)
+                brew install --cask wezterm
+                ;;
+            *)
+                echo -e "${RED}Неизвестный менеджер для WezTerm. Установите вручную.${NC}"
+                ;;
+        esac
+    else
+        echo -e "${GREEN}WezTerm уже установлен.${NC}"
+    fi
+}
 
-    if [ "$ADOPT" = true ]; then
-        STOW_OPTS="$STOW_OPTS --adopt"
-        echo -e "    ${YELLOW}Включён режим --adopt: существующие файлы будут скопированы в репозиторий.${NC}"
+# ---- Клонирование/обновление репозитория ----
+prepare_repo() {
+    echo -e "${YELLOW}Подготовка репозитория dotfiles...${NC}"
+    if [ -d "$DOTFILES_DIR/.git" ]; then
+        cd "$DOTFILES_DIR"
+        git pull
+    else
+        if [ -e "$DOTFILES_DIR" ]; then
+            echo -e "${RED}Каталог $DOTFILES_DIR существует, но не является git-репозиторием.${NC}"
+            exit 1
+        fi
+        git clone "$REPO_URL" "$DOTFILES_DIR"
+        cd "$DOTFILES_DIR"
+    fi
+}
+
+# ---- Применение stow ----
+apply_stow() {
+    if [ "$STOW_DOTFILES" = false ]; then
+        echo -e "${YELLOW}Пропускаем применение stow (--no-stow)${NC}"
+        return
     fi
 
-    if [ "$FORCE" = true ]; then
-        # --override удаляет конфликтующие файлы (только если они не являются симлинками)
-        STOW_OPTS="$STOW_OPTS --override=.*"
-        echo -e "    ${YELLOW}Включён режим --force: конфликтующие файлы будут удалены.${NC}"
+    echo -e "${YELLOW}Применяем символические ссылки через stow...${NC}"
+    for package in "${STOW_PACKAGES[@]}"; do
+        if [ ! -d "$package" ]; then
+            echo -e "${RED}Пакет '$package' не найден. Пропускаем.${NC}"
+            continue
+        fi
+        echo -e "  Обработка: ${GREEN}$package${NC}"
+        STOW_OPTS="-v --no-folding --restow"
+        [ "$FORCE" = true ] && STOW_OPTS="$STOW_OPTS --override=.*"
+        [ "$ADOPT" = true ] && STOW_OPTS="$STOW_OPTS --adopt"
+        if ! stow $STOW_OPTS "$package" 2>&1 | sed 's/^/    /'; then
+            echo -e "    ${RED}Ошибка. Попробуйте --force или --adopt.${NC}"
+            exit 1
+        fi
+    done
+}
+
+# ---- Смена оболочки на Zsh ----
+change_shell() {
+    if [ "$CHANGE_SHELL" = false ]; then
+        echo -e "${YELLOW}Пропускаем смену оболочки (--no-shell)${NC}"
+        return
     fi
 
-    # Выполняем stow
-    if ! stow $STOW_OPTS "$package" 2>&1 | sed 's/^/    /'; then
-        echo -e "    ${RED}Ошибка при применении stow для пакета $package.${NC}"
-        echo -e "    Возможно, есть конфликтующие файлы. Попробуйте запустить с --force или --adopt."
-        exit 1
+    if command -v zsh &>/dev/null; then
+        if [ "$SHELL" != "$(which zsh)" ]; then
+            echo -e "${YELLOW}Меняем оболочку по умолчанию на Zsh...${NC}"
+            chsh -s "$(which zsh)" || echo -e "${RED}Не удалось сменить оболочку. Сделайте это вручную: chsh -s $(which zsh)${NC}"
+        else
+            echo -e "${GREEN}Zsh уже является оболочкой по умолчанию.${NC}"
+        fi
+    else
+        echo -e "${RED}Zsh не установлен. Пропускаем смену оболочки.${NC}"
     fi
-done
+}
 
-echo -e "${GREEN}✅ Все конфиги развёрнуты успешно!${NC}"
-echo -e "Теперь перезагрузите терминал или откройте новый WezTerm, чтобы изменения вступили в силу."
+# ---- Главная функция ----
+main() {
+    detect_os
+    detect_package_manager
+    install_packages
+    prepare_repo
+    apply_stow
+    change_shell
+    echo -e "${GREEN}✅ Всё готово! Перезагрузите терминал или откройте новый WezTerm.${NC}"
+}
+
+main
