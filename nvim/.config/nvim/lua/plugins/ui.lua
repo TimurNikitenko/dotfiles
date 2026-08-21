@@ -26,8 +26,21 @@ return {
       require("lualine").setup({
         options = {
           theme = "catppuccin",
-          component_separators = { left = "", right = "" },
+          component_separators = { left = "│", right = "│" },
           section_separators = { left = "", right = "" },
+        },
+        sections = {
+          lualine_x = {
+            {
+              function()
+                return "AGY [󱚥]"
+              end,
+              color = { fg = "#a6e3a1" },
+            },
+            "encoding",
+            "fileformat",
+            "filetype",
+          },
         },
       })
     end,

@@ -103,12 +103,13 @@ source $ZSH/oh-my-zsh.sh
 # alias zshconfig="mate ~/.zshrc"
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 
-export PATH="$HOME/.fzf/bin:$PATH"
+export PATH="$HOME/.local/bin:/snap/bin:$HOME/.fzf/bin:$PATH"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 alias agy='/snap/bin/antigravity-cli'
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:/snap/bin:$PATH"
+alias nvim="$HOME/.local/bin/nvim"
 alias sync-tools="sudo ln -sf ~/.local/bin/* /usr/local/bin/"
 
 # Автосинхронизация бинарников из ~/.local/bin в Snap Antigravity

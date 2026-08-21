@@ -8,6 +8,19 @@ if vim.treesitter then
     end
 end
 
+-- Динамическое добавление пользовательских директорий бинарников в PATH
+local home = vim.fn.expand("~")
+local mason_bin = vim.fn.stdpath("data") .. "/mason/bin"
+local real_home = (os.getenv("HOME") or ""):gsub("/snap/[^/]+/common", "")
+local node_bin = real_home .. "/.nodejs/bin"
+local user_bins = { mason_bin, node_bin, home .. "/.local/bin", home .. "/bin" }
+for _, dir in ipairs(user_bins) do
+    if vim.fn.isdirectory(dir) == 1 and not (vim.env.PATH or ""):find(dir, 1, true) then
+        vim.env.PATH = dir .. ":" .. (vim.env.PATH or "")
+        vim.fn.setenv("PATH", vim.env.PATH)
+    end
+end
+
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
@@ -25,7 +38,7 @@ opt.wrap = false
 opt.swapfile = false
 opt.backup = false
 opt.undofile = true
-opt.undodir = os.getenv("HOME") .. "/.vim/undodir"
+opt.undodir = home .. "/.vim/undodir"
 
 opt.hlsearch = false
 opt.incsearch = true
