@@ -82,11 +82,8 @@ source $ZSH/oh-my-zsh.sh
 # export LANG=en_US.UTF-8
 
 # Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='nvim'
-# fi
+export EDITOR='nvim'
+export VISUAL='nvim'
 
 # Compilation flags
 # export ARCHFLAGS="-arch $(uname -m)"
@@ -107,6 +104,11 @@ export PATH="$HOME/.local/bin:/snap/bin:$HOME/.fzf/bin:$PATH"
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 alias agy='/snap/bin/antigravity-cli'
+alias git jump='git-jump'
+alias lg='lazygit'      # полный TUI
+alias vpn-on='adguardvpn-cli connect -l GR'
+alias vpn-off='adguardvpn-cli disconnect'
+alias vpn-status='adguardvpn-cli status'
 
 export PATH="$HOME/.local/bin:/snap/bin:$PATH"
 alias nvim="$HOME/.local/bin/nvim"
@@ -135,3 +137,37 @@ uv() {
     return $res
 }
 export UV_LINK_MODE=copy
+
+export PATH=$PATH:/home/timur/.iximiuz/labctl/bin
+source <(labctl completion zsh)
+
+# opencode
+export PATH=/home/timur/.opencode/bin:$PATH
+export PATH="$HOME/.opencode/bin:$PATH"
+
+export PATH=/home/timur/go/bin/:$PATH
+export PATH="$HOME/go/bin:$PATH"
+export PATH="$HOME/.npm-global/bin:$PATH"
+
+# lg() {
+#     export LAZYGIT_NEW_DIR_FILE=~/.lazygit/newdir
+#     lazygit "$@"
+#     if [ -f $LAZYGIT_NEW_DIR_FILE ]; then
+#         cd "$(cat $LAZYGIT_NEW_DIR_FILE)"
+#         rm -f $LAZYGIT_NEW_DIR_FILE > /dev/null
+#     fi
+# }
+sc-im() {
+    command sc-im --quiet "$@"
+}
+
+function y() {
+	local tmp cwd; tmp="$(mktemp -t "yazi-cwd.XXXXXX")"
+	command yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd" || builtin true
+	command rm -f -- "$tmp"
+}
+
+# zoxide (required for Yazi historical directory jumping)
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"

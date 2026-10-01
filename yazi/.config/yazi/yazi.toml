@@ -1,0 +1,69 @@
+# Yazi main configuration
+# Documentation: https://yazi-rs.github.io/docs/configuration/overview
+
+[mgr]
+ratio          = [ 1, 4, 3 ]
+sort_by        = "alphabetical"
+sort_sensitive = false
+sort_reverse   = false
+sort_dir_first = true
+linemode       = "none"
+show_hidden    = false
+show_symlink   = true
+scrolloff      = 5
+
+[preview]
+wrap            = "no"
+tab_size        = 2
+max_width       = 1200
+max_height      = 1500
+image_delay     = 30
+image_filter    = "triangle"
+image_quality   = 85
+
+[opener]
+edit = [
+    { run = 'PATH="$HOME/.local/bin:$PATH" nvim %s', block = true, desc = "Neovim" },
+]
+table = [
+    { run = 'PATH="$HOME/.local/bin:$PATH" vd %s', block = true, desc = "VisiData (terminal spreadsheet)" },
+    { run = 'PATH="$HOME/.local/bin:$PATH" sc-im %s', block = true, desc = "sc-im" },
+    { run = 'PATH="$HOME/.local/bin:$PATH" nvim %s', block = true, desc = "Neovim" },
+]
+pdf = [
+    { run = 'pdftotext -layout %s - | nvim -R -', block = true, desc = "Neovim (read PDF text in terminal)" },
+    { run = 'timg %s; echo ""; read -s -n 1 -r -p " [Press any key to close] "', block = true, desc = "timg (view visual PDF & pause)" },
+    { run = 'xdg-open %s1', orphan = true, desc = "System viewer" },
+]
+play = [
+    { run = 'xdg-open %s1', orphan = true, desc = "Play media" },
+]
+open = [
+    { run = 'xdg-open %s1', orphan = true, desc = "Open default" },
+    { run = 'PATH="$HOME/.local/bin:$PATH" nvim %s', block = true, desc = "Neovim" },
+]
+
+[open]
+prepend_rules = [
+    # PDF files (100% terminal viewers, no GUI windows)
+    { url = "*.pdf", use = [ "pdf", "reveal" ] },
+    { mime = "application/pdf", use = [ "pdf", "reveal" ] },
+
+    # Spreadsheets & CSVs (open in VisiData inside terminal)
+    { url = "*.csv",  use = [ "table", "edit", "reveal" ] },
+    { url = "*.tsv",  use = [ "table", "edit", "reveal" ] },
+    { url = "*.xlsx", use = [ "table", "edit", "reveal" ] },
+    { url = "*.xls",  use = [ "table", "edit", "reveal" ] },
+    { url = "*.ods",  use = [ "table", "edit", "reveal" ] },
+    { mime = "text/csv", use = [ "table", "edit", "reveal" ] },
+    { mime = "text/tab-separated-values", use = [ "table", "edit", "reveal" ] },
+    { mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use = [ "table", "open", "reveal" ] },
+    { mime = "application/vnd.ms-excel", use = [ "table", "open", "reveal" ] },
+
+    # Open dotfiles in Neovim
+    { url = "*/.*", use = "edit" },
+]
+append_rules = [
+    # Fallback for unrecognized files
+    { url = "*", use = [ "open", "edit", "reveal" ] },
+]

@@ -37,7 +37,7 @@ return {
       vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Debug: Step Over" })
       vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Debug: Step Into" })
       vim.keymap.set("n", "<F9>", dap.toggle_breakpoint, { desc = "Debug: Toggle Breakpoint" })
-      vim.keymap.set("n", "<leader>dm", function()
+      vim.keymap.set("n", "<leader>tm", function()
         require("dap-python").test_method()
       end, { desc = "Debug Test Method" })
     end,

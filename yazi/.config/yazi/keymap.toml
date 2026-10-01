@@ -1,0 +1,9 @@
+# Yazi keymap configuration
+# Inherits all built-in default bindings.
+# Add your custom keybindings below.
+
+[mgr]
+prepend_keymap = [
+    # Example: custom key bindings can be defined here
+    # { on = [ "g", "h" ], run = "cd ~", desc = "Go to home" },
+]

@@ -31,7 +31,9 @@ return {
         { key = 'l',          mods = 'ALT',        action = act.ActivatePaneDirection 'Right' },
         { key = 'k',          mods = 'ALT',        action = act.ActivatePaneDirection 'Up' },
         { key = 'j',          mods = 'ALT',        action = act.ActivatePaneDirection 'Down' },
-        { key = 'f',          mods = 'CTRL|SHIFT', action = act.Search { CaseSensitiveString = '' } },
+        { key = 'f',          mods = 'CTRL|SHIFT', action = act.Search { CaseSensitiveString = '' }},
+        { key = '{', mods = 'SHIFT|ALT', action = act.MoveTabRelative(-1) },
+        { key = '}', mods = 'SHIFT|ALT', action = act.MoveTabRelative(1) },
     },
 
     enable_wayland = false,

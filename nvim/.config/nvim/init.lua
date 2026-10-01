@@ -24,6 +24,10 @@ end
 vim.g.mapleader = " "
 vim.g.maplocalleader = "\\"
 
+-- Delete to black hole register (doesn't overwrite clipboard)
+vim.keymap.set({'n', 'v'}, '<leader>d', '"_d', { desc = "Delete without copying" })
+
+
 local opt = vim.opt
 
 opt.number = true

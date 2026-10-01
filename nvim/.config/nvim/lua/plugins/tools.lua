@@ -9,8 +9,28 @@ return {
     config = function() require("nvim-autopairs").setup() end,
   },
   {
-    "numToStr/Comment.nvim",
-    config = function() require("Comment").setup() end,
+    "echasnovski/mini.comment",
+    version = "*",
+    event = "VeryLazy",
+    config = function()
+      require("mini.comment").setup({
+        options = {
+          custom_commentstring = function()
+            return (vim.bo.commentstring and vim.bo.commentstring ~= "") and vim.bo.commentstring or "# %s"
+          end,
+        },
+        mappings = {
+          comment = "gc",
+          comment_line = "gcc",
+          comment_visual = "gc",
+          textobject = "gc",
+        },
+      })
+
+      -- Keymap for <leader>/ to toggle comment on current line (Normal) or selection (Visual)
+      vim.keymap.set("n", "<leader>/", "gcc", { remap = true, desc = "Toggle comment line" })
+      vim.keymap.set("v", "<leader>/", "gc", { remap = true, desc = "Toggle comment selection" })
+    end,
   },
   {
     "folke/trouble.nvim",

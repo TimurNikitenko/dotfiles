@@ -4,7 +4,7 @@ set -e
 # ===== Конфигурация =====
 REPO_URL="https://github.com/TimurNikitenko/dotfiles.git"
 DOTFILES_DIR="$HOME/dotfiles"
-STOW_PACKAGES=("git" "nvim" "wezterm" "zsh")
+STOW_PACKAGES=("git" "nvim" "wezterm" "zsh" "yazi")
 
 # Флаги (по умолчанию всё включено)
 INSTALL_PROGRAMS=true
