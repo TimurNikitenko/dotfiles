@@ -26,7 +26,10 @@ vim.g.maplocalleader = "\\"
 
 -- Delete to black hole register (doesn't overwrite clipboard)
 vim.keymap.set({'n', 'v'}, '<leader>d', '"_d', { desc = "Delete without copying" })
-
+vim.keymap.set('n', 'gx', function()
+  local url = vim.fn.expand('<cWORD>') -- берём слово под курсором
+  vim.ui.open(url)
+end, { desc = 'Open URL under cursor' })
 
 local opt = vim.opt
 
