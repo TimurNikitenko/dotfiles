@@ -55,7 +55,7 @@ opt.signcolumn = "yes"
 opt.cursorline = true
 
 opt.updatetime = 50
-opt.timeoutlen = 300
+opt.timeoutlen = 750
 opt.splitright = true
 opt.splitbelow = true
 opt.clipboard = "unnamedplus"
@@ -72,6 +72,34 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
     })
 end
 vim.opt.rtp:prepend(lazypath)
+vim.api.nvim_create_autocmd("FileType", {
+  pattern = "json", -- или "*", если хотите для всех файлов с Treesitter
+  callback = function()
+    vim.schedule(function()
+      vim.wo.foldmethod = "expr"
+      vim.wo.foldexpr = "v:lua.vim.treesitter.foldexpr()" -- актуальная функция
+      vim.wo.foldlevel = 99
+      vim.wo.foldenable = true
+    end)
+  end,
+})
+-- Функция для экранирования специальных символов в langmap
+local function escape_langmap(str)
+  -- Эти символы являются специальными в langmap и должны быть экранированы
+  local escape_chars = [[;,."|\]]
+  return vim.fn.escape(str, escape_chars)
+end
+
+-- Определяем строки символов
+-- Русские символы (то, что вы нажимаете)
+local ru = [[ёйцукенгшщзхъфывапролджэячсмитьбю.Ё"№;:?]]
+-- Соответствующие английские символы (то, во что они должны превращаться)
+local en = [[`qwertyuiop[]asdfghjkl;'zxcvbnm,./~@#$^&]]
+
+-- Добавляем пары в langmap
+vim.opt.langmap:append(vim.fn.join({
+  escape_langmap(ru) .. ";" .. escape_langmap(en),
+}, ","))
 
 require("lazy").setup({
     spec = {
